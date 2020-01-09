@@ -1,0 +1,17 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: my-test-taskrun
+spec:
+  taskRef:
+    name: my-test-task
+  inputs:
+    resources:
+    - name: source-code
+      resourceRef:
+        name: kbit-git
+  outputs:
+    resources:
+    - name: build-image
+      resourceRef:
+        name: kbit-api-image

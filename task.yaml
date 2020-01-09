@@ -1,0 +1,28 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: my-test-task
+spec:
+  inputs:
+    resources:
+    - name: source-code
+      type: git
+  steps:
+  - name: my-builder
+    image: "registry.redhat.io/openjdk/openjdk-11-rhel7"
+    command:
+    - /bin/bash
+    args: ["-c", "sleep 3600"]
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: my-test-taskrun
+spec:
+  taskRef:
+    name: my-test-task
+  inputs:
+    resources:
+    - name: source-code
+      resourceRef:
+        name: kbit-git
