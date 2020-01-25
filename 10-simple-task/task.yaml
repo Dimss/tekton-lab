@@ -11,7 +11,7 @@ spec:
 apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
-  name: springboot-mvn
+  name: springboot-mvn-unittests
 spec:
   inputs:
     resources:

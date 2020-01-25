@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: kbit-git
+spec:
+  type: git
+  params:
+    - name: url
+      value: https://github.com/Dimss/kbit-api
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sonarqube-scan
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+  steps:
+  - name: sonarqube-scan
+    image: "docker.io/dimssss/java11-mvn:latest"
+    command:
+    - /bin/bash
+    args:
+    - -c
+    - |
+      cd workspace
+      sleep 3600
+      mvn clean package sonar:sonar
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: t
+spec:
+  taskRef:
+    name: sonarqube-scan
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+  inputs:
+    resources:
+    - name: workspace
+      resourceRef:
+        name: kbit-git
