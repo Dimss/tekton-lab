@@ -5,8 +5,8 @@ metadata:
 spec:
   type: git
   params:
-    - name: url
-      value: https://github.com/Dimss/kbit-api
+  - name: url
+    value: https://github.com/Dimss/kbit-api
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
@@ -15,8 +15,8 @@ metadata:
 spec:
   type: image
   params:
-    - name: url
-      value: docker.io/dimssss/kbit-api:tekton-test
+  - name: url
+    value: docker.io/dimssss/kbit-api:tekton-test
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: TaskRun

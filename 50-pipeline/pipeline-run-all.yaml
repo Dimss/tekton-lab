@@ -1,0 +1,125 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: kbit-git
+spec:
+  type: git
+  params:
+    - name: url
+      value: https://github.com/Dimss/kbit-api
+---
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: kbit-api-image
+spec:
+  type: image
+  params:
+    - name: url
+      value: docker.io/dimssss/kbit-api:latest
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: springboot-mvn-unittests
+spec:
+  inputs:
+    resources:
+      - name: workspace
+        type: git
+  steps:
+    - name: mvn-unittests
+      image: "docker.io/dimssss/java11-mvn:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          cd workspace
+          mvn test
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sonarqube-scan
+spec:
+  inputs:
+    resources:
+      - name: workspace
+        type: git
+  steps:
+    - name: sonarqube-scan
+      image: "docker.io/dimssss/java11-mvn:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          cd workspace
+          mvn clean package sonar:sonar
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: kbit-api-pipeline
+spec:
+  resources:
+    - name: kbit-git
+      type: git
+    - name: kbit-api-image
+      type: image
+  tasks:
+    - name: unit-tests
+      taskRef:
+        name: springboot-mvn-unittests
+      resources:
+        inputs:
+          - name: workspace
+            resource: kbit-git
+    - name: sonarqube-scan
+      taskRef:
+        name: sonarqube-scan
+      resources:
+        inputs:
+          - name: workspace
+            resource: kbit-git
+    - name: s2i-build
+      taskRef:
+        kind: ClusterTask
+        name: s2i-java-11
+      resources:
+        inputs:
+          - name: source
+            resource: kbit-git
+        outputs:
+          - name: image
+            resource: kbit-api-image
+    - name: integration-tests
+      taskRef:
+        name: integration-tests
+      params:
+        - name: appName
+          value: "kbit-api"
+        - name: pgName
+          value: "pg-kbit-api"
+      resources:
+        inputs:
+          - name: workspace
+            resource: kbit-git
+          - name: image
+            resource: kbit-api-image
+---
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: kbit-api-pipeline-run
+spec:
+  pipelineRef:
+    name: kbit-api-pipeline
+  resources:
+    - name: kbit-git
+      resourceRef:
+        name: kbit-git
+    - name: kbit-api-image
+      resourceRef:
+        name: kbit-api-image

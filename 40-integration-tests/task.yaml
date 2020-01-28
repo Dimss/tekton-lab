@@ -1,0 +1,153 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: kbit-git
+spec:
+  type: git
+  params:
+    - name: url
+      value: https://github.com/Dimss/kbit-api
+---
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: kbit-api-image
+spec:
+  type: image
+  params:
+    - name: url
+      value: docker.io/dimssss/kbit-api:tekton-test
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: integration-tests
+spec:
+  inputs:
+    params:
+      - name: appName
+        type: string
+      - name: pgName
+        type: string
+      - name: image
+        type: string
+        default: docker.io/dimssss/kbit-api:latest
+    resources:
+      - name: workspace
+        type: git
+      - name: image
+        type: image
+  steps:
+    - name: deploy-pg
+      image: "docker.io/dimssss/tools:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          oc get templates postgresql-ephemeral -n openshift -o json | \
+              oc process -pDATABASE_SERVICE_NAME=$(inputs.params.pgName) \
+              -pPOSTGRESQL_USER=$(inputs.params.pgName) \
+              -pPOSTGRESQL_PASSWORD=$(inputs.params.pgName) \
+              -pPOSTGRESQL_DATABASE=$(inputs.params.pgName) \
+              -f - | oc create -f -
+          oc wait --for=condition=available --timeout=60s dc/$(inputs.params.pgName)
+    - name: deploy-app
+      image: "docker.io/dimssss/tools:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          cd workspace
+          oc process -f ocp/tmpl/kbit-app.yaml \
+                     -pNAME=$(inputs.params.appName) \
+                     -pIMAGE=$(inputs.params.image) \
+                     -pDB_NAME=$(inputs.params.pgName) \
+                     -pDB_USER=$(inputs.params.pgName) \
+                     -pDB_PASS=$(inputs.params.pgName) | oc create -f -
+          oc wait --for=condition=available --timeout=32s deployment/$(inputs.params.appName)
+    - name: run-integration-tests-app
+      image: "docker.io/dimssss/tools:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          cd workspace
+
+          oc process -f ocp/tmpl/integration-tests.yaml \
+           -pNAME=integration-tests-$(inputs.params.appName) \
+           -pSA=oc-client \
+           -pKBIT_API=http://$(inputs.params.appName) \
+           | oc create -f -
+
+          for i in {1..32}; do
+            JOB_STATUS=$(oc get job/integration-tests-kbit-api -o json | jq  .status.active)
+            if [ "$JOB_STATUS" = "1" ]; then
+                echo "Job is active"
+                break
+            else
+                echo "[attempt:$i/32] Job is NOT active"
+            fi
+            sleep 1
+          done
+          JOB_POD_NAME=$(oc get pods | grep integration-tests-kbit-api | cut -f1 -d ' ')
+          echo "Job POD: ${JOB_POD_NAME}"
+          oc wait --for=condition=ready --timeout=32s pod/$JOB_POD_NAME
+          oc logs -f ${JOB_POD_NAME}
+    - name: cleanup
+      image: "docker.io/dimssss/tools:latest"
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          cd workspace
+
+          # Delete PG
+          oc get templates postgresql-ephemeral -n openshift -o json | \
+            oc process -pDATABASE_SERVICE_NAME=$(inputs.params.pgName) \
+            -pPOSTGRESQL_USER=$(inputs.params.pgName) \
+            -pPOSTGRESQL_PASSWORD=$(inputs.params.pgName) \
+            -pPOSTGRESQL_DATABASE=$(inputs.params.pgName) \
+            -f - | oc delete -f -
+
+          # Delete APP
+          oc process -f ocp/tmpl/kbit-app.yaml \
+            -pNAME=$(inputs.params.appName) \
+            -pIMAGE=$(inputs.params.image) \
+            -pDB_NAME=$(inputs.params.pgName) \
+            -pDB_USER=$(inputs.params.pgName) \
+            -pDB_PASS=$(inputs.params.pgName) \
+            | oc delete -f -
+
+          # Delete test runner
+          oc process -f ocp/tmpl/integration-tests.yaml \
+          -pNAME=integration-tests-$(inputs.params.appName) \
+          -pSA=oc-client \
+          -pKBIT_API=http://$(inputs.params.appName) \
+          | oc delete -f -
+
+
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: t
+spec:
+  taskRef:
+    name: integration-tests
+  inputs:
+    params:
+      - name: appName
+        value: "kbit-api"
+      - name: pgName
+        value: "pg-kbit-api"
+    resources:
+      - name: workspace
+        resourceRef:
+          name: kbit-git
+      - name: image
+        resourceRef:
+          name: kbit-api-image

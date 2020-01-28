@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-nginx
+  labels:
+    app: report-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: report-nginx
+  template:
+    metadata:
+      labels:
+        app: report-nginx
+    spec:
+      containers:
+      - name: report-nginx
+        image: docker.io/dimssss/nginx-for-ocp:0.1
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: kbit-test-reports
+          mountPath: /opt/app-root/src
+      volumes:
+        - name: kbit-test-reports
+          configMap:
+            name: kbit-test-reports
+
+
+
+
+

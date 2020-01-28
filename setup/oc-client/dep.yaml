@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oc-client
+  labels:
+    app: oc-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oc-client
+  template:
+    metadata:
+      labels:
+        app: oc-client
+    spec:
+      serviceAccountName: oc-client
+      containers:
+      - name: oc-client
+        image: docker.io/dimssss/oc43:latest
+        command: ["/bin/bash","-c","sleep 3600"]
