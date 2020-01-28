@@ -1,67 +1,7 @@
 apiVersion: tekton.dev/v1alpha1
-kind: PipelineResource
-metadata:
-  name: kbit-git
-spec:
-  type: git
-  params:
-    - name: url
-      value: https://github.com/Dimss/kbit-api
----
-apiVersion: tekton.dev/v1alpha1
-kind: PipelineResource
-metadata:
-  name: kbit-api-image
-spec:
-  type: image
-  params:
-    - name: url
-      value: docker.io/dimssss/kbit-api:latest
----
-apiVersion: tekton.dev/v1alpha1
-kind: Task
-metadata:
-  name: springboot-mvn-unittests
-spec:
-  inputs:
-    resources:
-      - name: workspace
-        type: git
-  steps:
-    - name: mvn-unittests
-      image: "docker.io/dimssss/java11-mvn:latest"
-      command:
-        - /bin/bash
-      args:
-        - -c
-        - |
-          cd workspace
-          mvn test
----
-apiVersion: tekton.dev/v1alpha1
-kind: Task
-metadata:
-  name: sonarqube-scan
-spec:
-  inputs:
-    resources:
-      - name: workspace
-        type: git
-  steps:
-    - name: sonarqube-scan
-      image: "docker.io/dimssss/java11-mvn:latest"
-      command:
-        - /bin/bash
-      args:
-        - -c
-        - |
-          cd workspace
-          mvn clean package sonar:sonar
----
-apiVersion: tekton.dev/v1alpha1
 kind: Pipeline
 metadata:
-  name: kbit-api-pipeline
+  name: kbit-api-pipeline-by-order
 spec:
   resources:
     - name: kbit-git
@@ -119,10 +59,10 @@ spec:
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineRun
 metadata:
-  name: kbit-api-pipeline-run
+  name: kbit-api-pipeline-run-by-order
 spec:
   pipelineRef:
-    name: kbit-api-pipeline
+    name: kbit-api-pipeline-by-order
   resources:
     - name: kbit-git
       resourceRef:

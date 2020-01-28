@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: pipeline-template
+spec:
+  params:
+    - name: gitUrl
+      description: The git repository url
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        generateName: kbit-pipeline-run-
+      spec:
+        pipelineRef:
+          name: kbit-api-pipeline-by-order
+        resources:
+          - name: kbit-git
+            resourceSpec:
+              type: git
+              params:
+                - name: url
+                  value: $(params.gitUrl)
+          - name: kbit-api-image
+            resourceSpec:
+              type: image
+              params:
+                - name: url
+                  value: docker.io/dimssss/kbit-api:tekton-test
