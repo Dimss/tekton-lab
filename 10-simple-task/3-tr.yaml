@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: simple-task-run
+spec:
+  taskRef:
+    name: mvn-unittests
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+  inputs:
+    resources:
+      - name: workspace
+        resourceRef:
+          name: kbit-git

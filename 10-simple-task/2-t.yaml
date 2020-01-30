@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: mvn-unittests
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+  steps:
+  - name: mvn-unittests
+    image: "docker.io/dimssss/java11-mvn:latest"
+    command:
+    - /bin/bash
+    args:
+    - -c
+    - |
+      cd workspace
+      mvn test
+

@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: kbit-api-taskrun
+spec:
+  taskRef:
+    kind: ClusterTask
+    name: s2i-java-11
+  inputs:
+    resources:
+    - name: source
+      resourceRef:
+        name: kbit-api
+  outputs:
+    resources:
+     - name: image
+       resourceRef:
+        name: kbit-api-image

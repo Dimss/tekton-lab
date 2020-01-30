@@ -11,14 +11,14 @@ spec:
 apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
-  name: springboot-mvn-unittests
+  name: sonarqube-scan
 spec:
   inputs:
     resources:
     - name: workspace
       type: git
   steps:
-  - name: mvn-unittests
+  - name: sonarqube-scan
     image: "docker.io/dimssss/java11-mvn:latest"
     command:
     - /bin/bash
@@ -26,15 +26,16 @@ spec:
     - -c
     - |
       cd workspace
-      mvn test
+      sleep 3600
+      mvn clean package sonar:sonar
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: TaskRun
 metadata:
-  name: t
+  name: sonarqube-task-run
 spec:
   taskRef:
-    name: springboot-mvn
+    name: sonarqube-scan
   podTemplate:
     securityContext:
       runAsNonRoot: true
