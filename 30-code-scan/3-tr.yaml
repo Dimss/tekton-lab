@@ -1,0 +1,17 @@
+
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: sonarqube-task-run
+spec:
+  taskRef:
+    name: sonarqube-scan
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+  inputs:
+    resources:
+    - name: workspace
+      resourceRef:
+        name: kbit-git

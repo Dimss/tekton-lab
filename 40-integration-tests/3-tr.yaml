@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: t
+spec:
+  taskRef:
+    name: integration-tests
+  inputs:
+    params:
+      - name: appName
+        value: "kbit-api"
+      - name: pgName
+        value: "pg-kbit-api"
+    resources:
+      - name: workspace
+        resourceRef:
+          name: kbit-git
+      - name: image
+        resourceRef:
+          name: kbit-api-image
